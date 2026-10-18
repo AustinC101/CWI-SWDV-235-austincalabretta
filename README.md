@@ -1,3 +1,1 @@
-# Git practice
-
-My first Git repository
+# SWDV-235 Labs
