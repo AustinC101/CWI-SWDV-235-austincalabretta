@@ -43,6 +43,12 @@
       <artifactId>j2html</artifactId>
       <version>1.6.0</version>
     </dependency>
+
+    <dependency>
+      <groupId>io.javalin</groupId>
+      <artifactId>javalin-rendering-jte</artifactId>
+      <version>7.2.3</version>
+    </dependency>
   </dependencies>
 
   <build>
