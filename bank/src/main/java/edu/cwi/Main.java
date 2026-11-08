@@ -1,8 +1,13 @@
 package edu.cwi;
 
+import java.util.List;
+import java.util.Map;
+
 import io.javalin.Javalin;
 import static io.javalin.apibuilder.ApiBuilder.crud;
+import static io.javalin.apibuilder.ApiBuilder.get;
 import static io.javalin.apibuilder.ApiBuilder.path;
+import io.javalin.http.UnauthorizedResponse;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.rendering.template.JavalinJte;
 
@@ -28,17 +33,51 @@ public class Main {
             config.staticFiles.add("/public", Location.CLASSPATH);
 
             config.routes.apiBuilder(() -> {
+
+                path("account", List.of(AppRole.CUSTOMER), () -> {
+                    get(ctx -> {
+                        String userId = ctx.cookieStore().get("user-id");
+
+                        UserAccount account = AuthController.getUser(userId)
+                            .orElseThrow(UnauthorizedResponse::new);
+
+                        ctx.render("/accountPage.jte", Map.of(
+                            "title", "Community Bank - Account",
+                            "account", account
+                        ));
+                    });
+                });
+
                 path("api/transactions", () -> {
                     crud("/{transaction-id}", transactionsController);
                 });
             });
 
-            config.routes.post("/account", ctx -> {
-                ctx.redirect("/account.html");
+            config.routes.post("/login", ctx -> {
+                AuthController.authenticate(ctx);
+            });
+
+            config.routes.beforeMatched(ctx -> {
+
+                if (ctx.routeRoles().isEmpty()) {
+                    return;
+                }
+
+                String role = ctx.cookieStore().get("user-role");
+
+                if (role == null) {
+                    throw new UnauthorizedResponse();
+                }
+
+                AppRole appRole = AppRole.valueOf(role);
+
+                if (!ctx.routeRoles().contains(appRole)) {
+                    throw new UnauthorizedResponse();
+                }
             });
 
             config.routes.get("/logout", ctx -> {
-                ctx.redirect("/");
+                AuthController.logout(ctx);
             });
         });
 

@@ -9,11 +9,14 @@ import static j2html.TagCreator.a;
 import static j2html.TagCreator.body;
 import static j2html.TagCreator.div;
 import static j2html.TagCreator.h1;
+import static j2html.TagCreator.h2;
 import static j2html.TagCreator.head;
 import static j2html.TagCreator.html;
+import static j2html.TagCreator.li;
 import static j2html.TagCreator.p;
 import static j2html.TagCreator.script;
 import static j2html.TagCreator.title;
+import static j2html.TagCreator.ul;
 
 public class TransactionsController implements CrudHandler {
 
@@ -76,30 +79,22 @@ public class TransactionsController implements CrudHandler {
     @Override
     public void getAll(Context ctx) {
 
-        Map<String, String> accountTransactions = new LinkedHashMap<>();
-        double balance = 0.0;
-
-        for (Transaction transaction : transactions.values()) {
-            accountTransactions.put(
-            transaction.description,
-            transaction.amount
-            );
-
-            balance += Double.parseDouble(transaction.amount);
-        }
-
-        UserAccount account = new UserAccount(
-            "John Doe",
-            balance,
-            accountTransactions
-            );
-
-        ctx.render("/accountPage.jte",
-        Map.of(
-            "title", "Community Bank - Account",
-            "account", account
-            ));
-        }
+        ctx.html(page("Transactions",
+            div(
+                h2("Transactions"),
+                ul(
+                    transactions.values().stream()
+                        .map(transaction ->
+                            li(
+                                transaction.description + " - $" + transaction.amount
+                            )
+                        )
+                        .toArray(j2html.tags.DomContent[]::new)
+                ),
+                a("/").withText("Back to Home")
+            )
+        ));
+    }
 
     @Override
     public void getOne(Context ctx, String resourceId) {
