@@ -75,9 +75,31 @@ public class TransactionsController implements CrudHandler {
 
     @Override
     public void getAll(Context ctx) {
-        ctx.render("/transactionsPage.jte",
-            Map.of("transactions", transactions.values()));
-    }
+
+        Map<String, String> accountTransactions = new LinkedHashMap<>();
+        double balance = 0.0;
+
+        for (Transaction transaction : transactions.values()) {
+            accountTransactions.put(
+            transaction.description,
+            transaction.amount
+            );
+
+            balance += Double.parseDouble(transaction.amount);
+        }
+
+        UserAccount account = new UserAccount(
+            "John Doe",
+            balance,
+            accountTransactions
+            );
+
+        ctx.render("/accountPage.jte",
+        Map.of(
+            "title", "Community Bank - Account",
+            "account", account
+            ));
+        }
 
     @Override
     public void getOne(Context ctx, String resourceId) {

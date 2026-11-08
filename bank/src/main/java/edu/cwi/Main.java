@@ -14,7 +14,7 @@ public class Main {
 
         Javalin app = Javalin.create(config -> {
             JavalinJte jte = new JavalinJte(
-                JavalinJte.Companion.directoryTemplateEngine("src/main/resources/jte")
+                JavalinJte.Companion.directoryTemplateEngine("bank/src/main/resources/jte")
             );
 
             config.fileRenderer((filePath, model, ctx) -> {
