@@ -3,6 +3,14 @@ package edu.cwi;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.ibatis.session.SqlSession;
+
+import edu.cwi.database.MyBatisConfig;
+import edu.cwi.mappers.AccountMapper;
+import edu.cwi.mappers.TransactionMapper;
+import edu.cwi.models.Account;
+import edu.cwi.models.Transaction;
+import edu.cwi.models.User;
 import io.javalin.Javalin;
 import static io.javalin.apibuilder.ApiBuilder.crud;
 import static io.javalin.apibuilder.ApiBuilder.get;
@@ -13,21 +21,46 @@ import io.javalin.rendering.template.JavalinJte;
 
 public class Main {
     public static void main(String[] args) {
+        Thread.currentThread().setContextClassLoader(
+            Main.class.getClassLoader()
+        );
+
+        UsersController usersController = new UsersController();
 
         TransactionsController transactionsController =
                 new TransactionsController();
 
         Javalin app = Javalin.create(config -> {
             JavalinJte jte = new JavalinJte(
-                JavalinJte.Companion.directoryTemplateEngine("bank/src/main/resources/jte")
+                JavalinJte.Companion.directoryTemplateEngine("src/main/resources/jte")
             );
 
             config.fileRenderer((filePath, model, ctx) -> {
-                String templatePath = filePath.startsWith("/")
-                        ? filePath.substring(1)
-                        : filePath;
+                System.out.println("Main classloader: " +
+                    Main.class.getClassLoader().getResource("gg/jte/Content.class"));
 
-                return jte.render(templatePath, model, ctx);
+                System.out.println("Request thread classloader: " +
+                    Thread.currentThread().getContextClassLoader().getResource("gg/jte/Content.class"));
+
+                ClassLoader originalClassLoader =
+                        Thread.currentThread().getContextClassLoader();
+
+                try {
+                    Thread.currentThread().setContextClassLoader(
+                            Main.class.getClassLoader()
+                    );
+
+                    String templatePath = filePath.startsWith("/")
+                            ? filePath.substring(1)
+                            : filePath;
+
+                    return jte.render(templatePath, model, ctx);
+
+                } finally {
+                    Thread.currentThread().setContextClassLoader(
+                            originalClassLoader
+                    );
+                }
             });
 
             config.staticFiles.add("/public", Location.CLASSPATH);
@@ -36,16 +69,48 @@ public class Main {
 
                 path("account", List.of(AppRole.CUSTOMER), () -> {
                     get(ctx -> {
-                        String userId = ctx.cookieStore().get("user-id");
 
-                        UserAccount account = AuthController.getUser(userId)
-                            .orElseThrow(UnauthorizedResponse::new);
+                        User user = AuthController.getUser(ctx);
 
-                        ctx.render("/accountPage.jte", Map.of(
-                            "title", "Community Bank - Account",
-                            "account", account
-                        ));
+                        if (user == null) {
+                            throw new UnauthorizedResponse();
+                        }
+
+                        try (SqlSession session =
+                                    MyBatisConfig.getSqlSessionFactory().openSession()) {
+
+                            AccountMapper accountMapper =
+                                    session.getMapper(AccountMapper.class);
+
+                            TransactionMapper transactionMapper =
+                                    session.getMapper(TransactionMapper.class);
+
+                            List<Account> accounts =
+                                    accountMapper.selectByUserId(user.getUserId());
+
+                            if (accounts.isEmpty()) {
+                                throw new UnauthorizedResponse();
+                            }
+
+                            Account account = accounts.get(0);
+
+                            List<Transaction> transactions =
+                                    transactionMapper.selectByAccountId(
+                                            account.getAccountId()
+                                    );
+
+                            ctx.render("/accountPage.jte", Map.of(
+                                "title", "Community Bank - Account",
+                                "user", user,
+                                "account", account,
+                                "transactions", transactions
+                            ));
+                        }
                     });
+                });
+
+                path("users", () -> {
+                    crud("/{user-id}", usersController);
                 });
 
                 path("api/transactions", () -> {

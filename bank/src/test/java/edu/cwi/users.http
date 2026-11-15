@@ -1,0 +1,22 @@
+GET http://localhost:7070/users
+Cookie: javalin-cookie-store=eyJ1c2VyLWlkIjoxLCJ1c2VyLXJvbGUiOiJBRE1JTiJ9
+
+###
+
+GET http://localhost:7070/users/1
+Cookie: javalin-cookie-store=eyJ1c2VyLWlkIjoxLCJ1c2VyLXJvbGUiOiJBRE1JTiJ9
+
+###
+
+POST http://localhost:7070/users?return=json
+content-type: application/json
+Cookie: javalin-cookie-store=eyJ1c2VyLWlkIjoxLCJ1c2VyLXJvbGUiOiJBRE1JTiJ9
+
+{
+    "username": "test2",
+    "password": "password",
+    "email": "test@test.com",
+    "firstName": "Test",
+    "lastName": "Guy",
+    "role": "CUSTOMER"
+}
