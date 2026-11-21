@@ -15,6 +15,7 @@ import io.javalin.Javalin;
 import static io.javalin.apibuilder.ApiBuilder.crud;
 import static io.javalin.apibuilder.ApiBuilder.get;
 import static io.javalin.apibuilder.ApiBuilder.path;
+import static io.javalin.apibuilder.ApiBuilder.post;
 import io.javalin.http.UnauthorizedResponse;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.rendering.template.JavalinJte;
@@ -92,6 +93,10 @@ public class Main {
                             ));
                         }
                     });
+                });
+
+                path("transaction", List.of(AppRole.CUSTOMER), () -> {
+                    post(transactionsController::createAccountTransaction);
                 });
 
                 path("account", List.of(AppRole.CUSTOMER), () -> {

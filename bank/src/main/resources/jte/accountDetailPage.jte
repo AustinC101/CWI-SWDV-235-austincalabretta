@@ -49,6 +49,26 @@
         </ul>
     @endif
 
+    <form action="/transaction" method="post">
+        <input type="hidden" name="accountId"
+            value="${account.getAccountId()}">
+
+        <label for="transactionType">Transaction Type:</label>
+        <select name="transactionType" id="transactionType" required>
+            <option value="Deposit">Deposit</option>
+            <option value="Withdrawal">Withdrawal</option>
+        </select>
+
+        <label for="amount">Amount:</label>
+        <input type="number" name="amount" id="amount"
+           step="0.01" min="0.01" required>
+
+        <label for="description">Description:</label>
+        <input type="text" name="description" id="description" required>
+
+        <button type="submit">Add Transaction</button>
+    </form>
+
     <p>
         <a href="/accounts">Back to Accounts</a>
     </p>

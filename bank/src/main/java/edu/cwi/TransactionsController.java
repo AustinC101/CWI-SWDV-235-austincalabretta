@@ -1,10 +1,19 @@
 package edu.cwi;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.apache.ibatis.session.SqlSession;
+
+import edu.cwi.database.MyBatisConfig;
+import edu.cwi.mappers.AccountMapper;
+import edu.cwi.mappers.TransactionMapper;
+import edu.cwi.models.Account;
+import edu.cwi.models.User;
 import io.javalin.apibuilder.CrudHandler;
 import io.javalin.http.Context;
+import io.javalin.http.UnauthorizedResponse;
 import static j2html.TagCreator.a;
 import static j2html.TagCreator.body;
 import static j2html.TagCreator.div;
@@ -74,6 +83,81 @@ public class TransactionsController implements CrudHandler {
                 script(SCRIPT)
             )
         ).render();
+    }
+
+    public void createAccountTransaction(Context ctx) {
+
+        User user = AuthController.getUser(ctx);
+
+        if (user == null) {
+            throw new UnauthorizedResponse();
+        }
+
+        String accountIdParam = ctx.formParam("accountId");
+        String transactionType = ctx.formParam("transactionType");
+        String amountParam = ctx.formParam("amount");
+        String description = ctx.formParam("description");
+
+        if (accountIdParam == null || transactionType == null
+                || amountParam == null || description == null
+                || description.isBlank()) {
+            ctx.status(400).result("All transaction fields are required");
+            return;
+        }
+
+        Long accountId;
+        BigDecimal amount;
+
+        try {
+            accountId = Long.valueOf(accountIdParam);
+            amount = new BigDecimal(amountParam);
+        } catch (NumberFormatException e) {
+            ctx.status(400).result("Invalid account ID or amount");
+            return;
+        }
+
+        if (accountId <= 0 || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            ctx.status(400).result("Account ID and amount must be positive");
+            return;
+        }
+
+        if (!transactionType.equals("Deposit")
+                && !transactionType.equals("Withdrawal")) {
+            ctx.status(400).result("Invalid transaction type");
+            return;
+        }
+
+        try (SqlSession session =
+                MyBatisConfig.getSqlSessionFactory().openSession(false)) {
+
+            AccountMapper accountMapper =
+                    session.getMapper(AccountMapper.class);
+
+            TransactionMapper transactionMapper =
+                    session.getMapper(TransactionMapper.class);
+
+            Account account = accountMapper.selectById(accountId);
+
+            if (account == null
+                    || !account.getUserId().equals(user.getUserId())) {
+                ctx.status(404).result("Account not found");
+                return;
+            }
+
+            edu.cwi.models.Transaction transaction =
+                    new edu.cwi.models.Transaction();
+
+            transaction.setAccountId(accountId);
+            transaction.setTransactionType(transactionType);
+            transaction.setAmount(amount);
+            transaction.setDescription(description);
+
+            transactionMapper.insert(transaction);
+
+            session.commit();
+
+            ctx.redirect("/account/" + accountId);
+        }
     }
 
     @Override
