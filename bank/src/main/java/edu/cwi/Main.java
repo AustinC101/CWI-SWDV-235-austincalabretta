@@ -67,8 +67,35 @@ public class Main {
 
             config.routes.apiBuilder(() -> {
 
-                path("account", List.of(AppRole.CUSTOMER), () -> {
+                path("accounts", List.of(AppRole.CUSTOMER), () -> {
                     get(ctx -> {
+
+                    User user = AuthController.getUser(ctx);
+
+                    if (user == null) {
+                        throw new UnauthorizedResponse();
+                    }
+
+                        try (SqlSession session =
+                            MyBatisConfig.getSqlSessionFactory().openSession()) {
+
+                            AccountMapper accountMapper =
+                                session.getMapper(AccountMapper.class);
+
+                            List<Account> accounts =
+                                accountMapper.selectByUserId(user.getUserId());
+
+                            ctx.render("/accountsPage.jte", Map.of(
+                                "title", "Community Bank - Accounts",
+                                "user", user,
+                                "accounts", accounts
+                            ));
+                        }
+                    });
+                });
+
+                path("account", List.of(AppRole.CUSTOMER), () -> {
+                    get("/{id}", ctx -> {
 
                         User user = AuthController.getUser(ctx);
 
@@ -76,8 +103,17 @@ public class Main {
                             throw new UnauthorizedResponse();
                         }
 
+                        Long accountId;
+
+                        try {
+                            accountId = Long.valueOf(ctx.pathParam("id"));
+                        } catch (NumberFormatException e) {
+                            ctx.status(400).result("Invalid account ID");
+                            return;
+                        }
+
                         try (SqlSession session =
-                                    MyBatisConfig.getSqlSessionFactory().openSession()) {
+                                MyBatisConfig.getSqlSessionFactory().openSession()) {
 
                             AccountMapper accountMapper =
                                     session.getMapper(AccountMapper.class);
@@ -85,25 +121,23 @@ public class Main {
                             TransactionMapper transactionMapper =
                                     session.getMapper(TransactionMapper.class);
 
-                            List<Account> accounts =
-                                    accountMapper.selectByUserId(user.getUserId());
+                            Account account = accountMapper.selectById(accountId);
 
-                            if (accounts.isEmpty()) {
-                                throw new UnauthorizedResponse();
+                            if (account == null ||
+                                    !account.getUserId().equals(user.getUserId())) {
+
+                                ctx.status(404).result("Account not found");
+                                return;
                             }
 
-                            Account account = accounts.get(0);
-
                             List<Transaction> transactions =
-                                    transactionMapper.selectByAccountId(
-                                            account.getAccountId()
-                                    );
+                                    transactionMapper.selectByAccountId(accountId);
 
-                            ctx.render("/accountPage.jte", Map.of(
-                                "title", "Community Bank - Account",
-                                "user", user,
-                                "account", account,
-                                "transactions", transactions
+                            ctx.render("/accountDetailPage.jte", Map.of(
+                                    "title", "Community Bank - Account Details",
+                                    "user", user,
+                                    "account", account,
+                                    "transactions", transactions
                             ));
                         }
                     });

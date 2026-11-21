@@ -10,7 +10,7 @@
     <title>${title}</title>
 </head>
 <body>
-    <h1>Community Bank</h1>
+    <h1>Javalin Bank</h1>
 
     ${account}
 

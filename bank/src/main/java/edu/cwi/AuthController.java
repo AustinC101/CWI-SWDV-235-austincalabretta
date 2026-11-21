@@ -34,7 +34,7 @@ public class AuthController {
                     user.getRole()
             );
 
-            ctx.redirect("/account");
+            ctx.redirect("/accounts");
 
         } else {
 
